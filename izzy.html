@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shrimpers Puzzle</title>
+<style>
+:root{
+  --board-size:420px; --gap:6px; --radius:12px; --shadow:0 10px 25px rgba(0,0,0,.15); --accent:#6b7cff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;
+  background:#0f1223; color:#e7e9ff;
+  display:flex; flex-direction:column; align-items:center; min-height:100vh;
+}
+
+/* 🎨 HEADER STYLING */
+header{
+  width:100%;
+  padding:22px;
+  text-align:center;
+  font-size:2rem;
+  font-weight:800;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  background:#0d0f25;
+  border-bottom:2px solid #2a2e55;
+  box-shadow:0 6px 18px rgba(0,0,0,.4);
+  background:linear-gradient(135deg,#14173a,#0f1223);
+}
+header span{
+  background:linear-gradient(90deg,#6b7cff,#5ac8fa,#00e0ff);
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  display:inline-block;
+  text-shadow:0 0 12px rgba(90,200,250,.5);
+  animation:shimmer 4s infinite linear;
+}
+@keyframes shimmer{
+  0%{background-position:0% 50%}
+  100%{background-position:200% 50%}
+}
+
+/* APP LAYOUT */
+.app{margin-top:24px; width:min(1200px,100%); display:grid; grid-template-columns:1fr 340px; gap:24px;}
+@media(max-width:980px){.app{grid-template-columns:1fr}}
+@media(max-width:600px){
+  :root{--board-size:92vw}
+  .app{gap:12px}
+  .panel{padding:12px}
+  button,select{padding:12px 10px; font-size:1rem}
+}
+
+/* PANELS */
+.panel{background:#171a33; border:1px solid #2a2e55; border-radius:var(--radius); padding:18px; box-shadow:var(--shadow);}
+.panel h2{margin:0 0 10px; font-size:1rem; color:#bfc5ff; text-transform:uppercase}
+.controls{display:flex; flex-wrap:wrap; gap:10px; margin:8px 0 14px}
+.controls>*{flex:1 1 140px}
+select,button{background:#0f1223; border:1px solid #2a2e55; color:#e7e9ff; border-radius:10px; padding:10px 12px}
+button{cursor:pointer; transition:transform .1s ease}
+button:active{transform:scale(.95)}
+.primary{background:linear-gradient(135deg,#6b7cff,#5ac8fa); border:0; color:#fff}
+.ghost{background:#121533}
+.stats{display:flex; gap:14px; flex-wrap:wrap; margin-top:8px; color:#c9cdff}
+.badge{padding:6px 10px; background:#101335; border:1px solid #2a2e55; border-radius:999px}
+
+/* BOARD */
+.board{width:var(--board-size); height:var(--board-size);
+  background:#0b0d1c; border-radius:var(--radius); border:1px solid #2a2e55;
+  padding:var(--gap); box-shadow:var(--shadow);
+  display:grid; gap:var(--gap); touch-action:manipulation; user-select:none;
+}
+.tile{border-radius:10px; border:1px solid rgba(255,255,255,.07);
+  background-size:calc(var(--cols)*100%) calc(var(--rows)*100%); background-repeat:no-repeat;
+  cursor:pointer; transition:transform .2s ease;
+}
+.tile.empty{background:none; border:2px dashed #6b7cff; opacity:.5; cursor:default}
+.tile.hint{outline:3px solid #ffeb3b; z-index:2}
+.ref{width:280px; border-radius:var(--radius); overflow:hidden; border:1px solid #2a2e55; box-shadow:var(--shadow); background:#0b0d1c}
+.ref header{font-size:.9rem; padding:10px 12px; color:#bfc5ff; border-bottom:1px solid #2a2e55; background:#14183a}
+.ref img{width:100%; display:block}
+
+/* WIN SCREEN */
+.win{position:fixed; inset:0; display:none; align-items:center; justify-content:center; backdrop-filter:blur(6px)}
+.win.show{display:flex}
+.win .card{background:#171a33; border:1px solid #2a2e55; border-radius:16px; padding:24px; text-align:center; width:min(92vw,460px); box-shadow:var(--shadow)}
+</style>
+</head>
+<body>
+<header><span>Shrimpers X Anoma</span></header>
+
+<div class="app">
+  <!-- Left Panel -->
+  <div class="panel">
+    <h2>Sliding Puzzle</h2>
+    <div class="controls">
+      <select id="size">
+        <option value="3">3×3 Easy</option>
+        <option value="4" selected>4×4 Normal</option>
+        <option value="5">5×5 Hard</option>
+      </select>
+      <button id="shuffle" class="primary">Shuffle</button>
+      <button id="reset" class="ghost">Reset</button>
+      <button id="hint" class="ghost">Hint</button>
+
+    </div>
+    <div class="stats">
+      <div class="badge">Moves: <b id="moves">0</b></div>
+      <div class="badge">Time: <b id="time">00:00</b></div>
+    </div>
+    <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:18px;justify-content:center">
+      <div id="board" class="board"></div>
+      <figure class="ref">
+        <header>Reference</header>
+        <img id="refImg" src="image/puzzle.jpg" alt="Reference image">
+      </figure>
+    </div>
+  </div>
+
+  <!-- Right Panel -->
+  <div class="panel">
+    <h2>How to play</h2>
+    <ol style="margin:0 0 12px 18px; line-height:1.55; color:#cfd3ff">
+      <li>Pick a grid size & image.</li>
+      <li>Tap or swipe a tile next to the empty space.</li>
+      <li>Rebuild the reference picture.</li>
+    </ol>
+  </div>
+</div>
+
+<!-- WIN -->
+<div class="win" id="win"><div class="card">
+  <h3>🎉 You solved it!</h3>
+  <p><span id="finalMoves">0</span> moves • <span id="finalTime">00:00</span></p>
+  <button id="playAgain" class="primary">Play again</button>
+</div></div>
+
+<script>
+const board=document.getElementById("board");
+const movesEl=document.getElementById("moves"), timeEl=document.getElementById("time");
+const sizeSel=document.getElementById("size"), refImg=document.getElementById("refImg");
+const shuffleBtn=document.getElementById("shuffle"), resetBtn=document.getElementById("reset");
+const hintBtn=document.getElementById("hint"), imgUpload=document.getElementById("imgUpload");
+const win=document.getElementById("win"), playAgain=document.getElementById("playAgain");
+const finalMoves=document.getElementById("finalMoves"), finalTime=document.getElementById("finalTime");
+
+let rows=4, cols=4, positions=[], emptyIndex, moves=0, startTime=null, timerId=null, image="image/puzzle.jpg";
+
+function fmt(n){return n<10?"0"+n:n}
+function updateTimer(){if(!startTime)return;let s=Math.floor((Date.now()-startTime)/1000);timeEl.textContent=`${fmt(s/60|0)}:${fmt(s%60)}`}
+function startTimer(){clearInterval(timerId);startTime=Date.now();timerId=setInterval(updateTimer,1000);updateTimer()}
+function stopTimer(){clearInterval(timerId);timerId=null}
+
+function buildBoard(){
+  board.innerHTML=""; board.style.setProperty("--rows",rows); board.style.setProperty("--cols",cols);
+  board.style.gridTemplateColumns=`repeat(${cols},1fr)`; board.style.gridTemplateRows=`repeat(${rows},1fr)`;
+  positions=Array.from({length:rows*cols},(_,i)=>i); emptyIndex=positions.length-1;
+  positions.forEach((_,i)=>{let t=document.createElement("div");t.className="tile";t.addEventListener("click",()=>tryMove(i));addSwipe(t,i);board.appendChild(t)});
+  resetStats(); render(); shuffle();
+}
+function resetStats(){moves=0;movesEl.textContent=moves;stopTimer();timeEl.textContent="00:00";startTime=null}
+function render(){
+  Array.from(board.children).forEach((tile,i)=>{
+    let pos=positions[i],row=Math.floor(pos/cols),col=pos%cols;
+    if(pos===emptyIndex){tile.className="tile empty";tile.style.backgroundImage="";}
+    else{tile.className="tile";tile.style.backgroundImage=`url('${image}')`;
+      tile.style.backgroundSize=`calc(${cols}*100%) calc(${rows}*100%)`;
+      tile.style.backgroundPosition=`${(col/(cols-1))*100}% ${(row/(rows-1))*100}%`;
+    }
+  });
+}
+function isAdjacent(i,j){let r1=Math.floor(i/cols),c1=i%cols,r2=Math.floor(j/cols),c2=j%cols;return Math.abs(r1-r2)+Math.abs(c1-c2)===1}
+function tryMove(i){let e=positions.indexOf(emptyIndex);if(isAdjacent(i,e)){[positions[i],positions[e]]=[positions[e],positions[i]];render();if(!startTime)startTimer();moves++;movesEl.textContent=moves;checkWin()}}
+function shuffle(){do{for(let i=positions.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[positions[i],positions[j]]=[positions[j],positions[i]]}}while(!isSolvable());render();resetStats()}
+function isSolvable(){let inv=0;for(let i=0;i<positions.length;i++)for(let j=i+1;j<positions.length;j++)if(positions[i]!==emptyIndex&&positions[j]!==emptyIndex&&positions[i]>positions[j])inv++;if(cols%2===1)return inv%2===0;let eRow=rows-(Math.floor(positions.indexOf(emptyIndex)/cols));return (eRow%2===0)^(inv%2===0)}
+function checkWin(){if(positions.every((v,i)=>v===i)){stopTimer();finalMoves.textContent=moves;finalTime.textContent=timeEl.textContent;win.classList.add("show")}}
+hintBtn.addEventListener("click",()=>{let e=positions.indexOf(emptyIndex);let candidates=[e-cols,e+cols,e-1,e+1].filter(i=>i>=0&&i<positions.length&&isAdjacent(i,e));if(candidates.length){let tile=board.children[candidates[0]];tile.classList.add("hint");setTimeout(()=>tile.classList.remove("hint"),900)}})
+sizeSel.addEventListener("change",()=>{rows=cols=+sizeSel.value;buildBoard()})
+resetBtn.addEventListener("click",()=>buildBoard())
+shuffleBtn.addEventListener("click",()=>shuffle())
+playAgain.addEventListener("click",()=>{win.classList.remove("show");shuffle()})
+
+
+/* 👉 Mobile swipe controls */
+function addSwipe(tile,i){
+  let startX,startY;
+  tile.addEventListener("touchstart",e=>{startX=e.touches[0].clientX;startY=e.touches[0].clientY});
+  tile.addEventListener("touchend",e=>{
+    if(!startX||!startY)return;
+    let dx=e.changedTouches[0].clientX-startX,dy=e.changedTouches[0].clientY-startY;
+    if(Math.abs(dx)>Math.abs(dy)){ if(dx>30) tryMove(i); else if(dx<-30) tryMove(i); }
+    else{ if(dy>30) tryMove(i); else if(dy<-30) tryMove(i); }
+    startX=startY=null;
+  });
+}
+
+buildBoard();
+</script>
+</body>
+</html>
